@@ -7,7 +7,7 @@
 //! $ cargo add alloc-cortex-m
 //! ```
 //!
-//! fails compilation with as with +stable as well as +nightly toolchain
+//! todo fails compilation with as with +stable as well as +nightly toolchain
 //! `cargo +nightly run --example allocator`
 //! ---
 
