@@ -1,0 +1,96 @@
+//! blinky timer using interrupts on TIM2, adapted from blinky_timer_irq.rs example from
+//! stm32f1xx-hal
+//!
+//! This assumes that a LED is connected to pa5 as is the case on most nucleo board.
+//!
+//! `cargo run --example hal_timer_irq`
+
+#![no_main]
+#![no_std]
+
+use panic_semihosting as _;
+
+use stm32f4xx_hal as hal;
+
+use crate::hal::{
+    gpio::{gpioa, Output, PushPull},
+    pac::{interrupt, Interrupt, Peripherals, TIM2},
+    prelude::*,
+    timer::{CounterUs, Event, Timer},
+};
+
+use core::cell::RefCell;
+use cortex_m::{asm::wfi, interrupt::Mutex};
+use cortex_m_rt::entry;
+use cortex_m_semihosting::hprint;
+
+// A type definition for the GPIO pin to be used for our LED
+// For the onboard nucleo LED, use gpioa::PA5 or gpiob::PB13 depending your model
+type LedPin = gpioa::PA5<Output<PushPull>>;
+
+// Make LED pin globally available
+static G_LED: Mutex<RefCell<Option<LedPin>>> = Mutex::new(RefCell::new(None));
+
+// Make timer interrupt registers globally available
+static G_TIM: Mutex<RefCell<Option<CounterUs<TIM2>>>> = Mutex::new(RefCell::new(None));
+
+// Define an interupt handler, i.e. function to call when interrupt occurs.
+// This specific interrupt will "trip" when the timer TIM2 times out
+#[interrupt]
+fn TIM2() {
+    static mut LED: Option<LedPin> = None;
+    static mut TIM: Option<CounterUs<TIM2>> = None;
+
+    let led = LED.get_or_insert_with(|| {
+        cortex_m::interrupt::free(|cs| {
+            // Move LED pin here, leaving a None in its place
+            G_LED.borrow(cs).replace(None).unwrap()
+        })
+    });
+
+    let tim = TIM.get_or_insert_with(|| {
+        cortex_m::interrupt::free(|cs| {
+            // Move LED pin here, leaving a None in its place
+            G_TIM.borrow(cs).replace(None).unwrap()
+        })
+    });
+
+    hprint!(".");
+    let _ = led.toggle();
+    let _ = tim.wait();  // clear_update_interrupt_flag
+}
+
+#[entry]
+fn main() -> ! {
+    let dp = Peripherals::take().unwrap();
+
+    let rcc = dp.RCC.constrain();
+    let clocks = rcc.cfgr.sysclk(16.mhz()).pclk1(8.mhz()).freeze();
+
+    // Configure PA5 pin to blink LED
+    let gpioa = dp.GPIOA.split();
+    let mut led = gpioa.pa5.into_push_pull_output();
+    let _ = led.set_high(); // Turn off
+
+    // Move the pin into our global storage
+    cortex_m::interrupt::free(|cs| *G_LED.borrow(cs).borrow_mut() = Some(led));
+
+    // Set up a timer expiring after 1s
+    let mut timer = Timer::new(dp.TIM2, &clocks).counter();
+    timer.start(1.secs()).unwrap();
+
+    // Generate an interrupt when the timer expires
+    timer.listen(Event::TimeOut);
+
+    // Move the timer into our global storage
+    cortex_m::interrupt::free(|cs| *G_TIM.borrow(cs).borrow_mut() = Some(timer));
+
+    //enable TIM2 interrupt
+    unsafe {
+        cortex_m::peripheral::NVIC::unmask(Interrupt::TIM2);
+    }
+
+    loop {
+        wfi();
+    }
+}
