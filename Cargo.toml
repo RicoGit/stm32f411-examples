@@ -22,6 +22,9 @@ stm32f4xx-hal = { features = [ "stm32f411" ], version = "0.11.1" }
 cortex-m-rtic = "1.0.0"
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 bme280 = "0.2.1"
+onewire = "0.3.13"
+ds18b20 = "0.1.1"
+one-wire-bus = "0.1.1"
 
 # this lets you use `cargo fix`!
 [[bin]]
