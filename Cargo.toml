@@ -25,6 +25,9 @@ bme280 = "0.2.1"
 onewire = "0.3.13"
 ds18b20 = "0.1.1"
 one-wire-bus = "0.1.1"
+embedded-graphics = "0.7.1"
+ssd1306 = "0.7.0"
+heapless = "0.7.9"
 
 # this lets you use `cargo fix`!
 [[bin]]
