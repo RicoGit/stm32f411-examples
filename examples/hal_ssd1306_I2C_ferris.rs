@@ -55,7 +55,7 @@ fn main() -> ! {
 
         // Display the rustacean
         let raw_image: ImageRaw<BinaryColor> =
-            ImageRaw::new(include_bytes!("hal_ssd1306_image.data"), 128);
+            ImageRaw::new(include_bytes!("hal_ssd1306_I2C_ferris.data"), 128);
         let image = Image::new(&raw_image, Point::zero());
         image.draw(&mut display).unwrap();
         display.flush().unwrap();
